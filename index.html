@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OPT Tracker — F-1 deadline calculator</title>
+<meta name="description" content="Offline, private F-1 OPT / STEM-OPT / CPT deadline tracker. All data stays in your browser.">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="OPT Tracker">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="wrap header-row">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">F1</span>
+      <div>
+        <h1>OPT Tracker</h1>
+        <p class="tagline">OPT · STEM-OPT · CPT deadlines, computed on your device</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="privacy-chip" title="No server, no database, no analytics.">🔒 100% local</span>
+      <button type="button" class="btn btn-ghost" id="installBtn" hidden>Install app</button>
+    </div>
+  </div>
+</header>
+
+<div class="disclaimer" role="note">
+  <strong>Not legal advice.</strong> This is an unofficial calculator. Immigration rules change and individual cases
+  vary — <strong>always confirm every date with your DSO / international student office</strong> before you file
+  anything.
+</div>
+
+<nav class="tabs wrap" role="tablist" aria-label="Sections">
+  <button class="tab" role="tab" id="tab-opt"       aria-controls="panel-opt"       data-panel="opt"       aria-selected="true">OPT</button>
+  <button class="tab" role="tab" id="tab-stem"      aria-controls="panel-stem"      data-panel="stem"      aria-selected="false">STEM-OPT</button>
+  <button class="tab" role="tab" id="tab-cpt"       aria-controls="panel-cpt"       data-panel="cpt"       aria-selected="false">CPT</button>
+  <button class="tab" role="tab" id="tab-glossary"  aria-controls="panel-glossary"  data-panel="glossary"  aria-selected="false">Glossary</button>
+  <button class="tab" role="tab" id="tab-resources" aria-controls="panel-resources" data-panel="resources" aria-selected="false">Resources</button>
+  <button class="tab" role="tab" id="tab-data"      aria-controls="panel-data"      data-panel="data"      aria-selected="false">Data &amp; Backup</button>
+</nav>
+
+<main class="wrap">
+
+  <!-- ================= OPT ================= -->
+  <section class="panel" id="panel-opt" role="tabpanel" aria-labelledby="tab-opt">
+    <div class="grid">
+      <form class="card" id="form-opt" autocomplete="off">
+        <h2>Your dates</h2>
+        <p class="hint">Everything below stays in this browser. Nothing is uploaded.</p>
+
+        <label class="field">
+          <span>I-94 expiration date <em>(admit-until date)</em></span>
+          <input type="date" name="i94Expiration">
+          <small>Under the Duration of Status final rule your I-94 has a <strong>fixed end date</strong>. Look it up at
+            <a href="https://i94.cbp.dhs.gov/" target="_blank" rel="noopener">i94.cbp.dhs.gov</a>.</small>
+        </label>
+
+        <label class="field">
+          <span>Program end date <em>(from your I-20)</em></span>
+          <input type="date" name="programEnd">
+          <small>Drives the 90-days-before / 60-days-after application window.</small>
+        </label>
+
+        <label class="field">
+          <span>DSO OPT recommendation date <em>(optional)</em></span>
+          <input type="date" name="dsoRecommendation">
+          <small>USCIS must receive your I-765 within 30 days of the SEVIS OPT recommendation.</small>
+        </label>
+
+        <label class="field">
+          <span>I-765 filed / receipt date <em>(optional)</em></span>
+          <input type="date" name="filedDate">
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>OPT start date <em>(EAD "valid from")</em></span>
+            <input type="date" name="optStart">
+          </label>
+          <label class="field">
+            <span>OPT end date <em>(blank = start + 12 months)</em></span>
+            <input type="date" name="optEnd">
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Unemployment days used so far <em>(optional)</em></span>
+          <input type="number" name="unemploymentUsed" min="0" max="90" step="1" placeholder="0" inputmode="numeric">
+          <small>Post-completion OPT allows an aggregate of 90 days of unemployment.</small>
+        </label>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-clear="opt">Clear this tab</button>
+        </div>
+      </form>
+
+      <div class="card results" id="results-opt">
+        <div class="results-head">
+          <h2>Your deadlines</h2>
+          <button type="button" class="btn btn-primary" data-ics="opt">⬇ Export reminders (.ics)</button>
+        </div>
+        <div class="flags" data-flags></div>
+        <ol class="timeline" data-timeline></ol>
+        <p class="empty" data-empty>Enter your program end date to see your OPT timeline.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEM-OPT ================= -->
+  <section class="panel" id="panel-stem" role="tabpanel" aria-labelledby="tab-stem" hidden>
+    <div class="grid">
+      <form class="card" id="form-stem" autocomplete="off">
+        <h2>Your dates</h2>
+        <p class="hint">STEM-OPT adds 24 months on top of an approved period of post-completion OPT.</p>
+
+        <label class="field">
+          <span>I-94 expiration date</span>
+          <input type="date" name="i94Expiration">
+          <small>Check <a href="https://i94.cbp.dhs.gov/" target="_blank" rel="noopener">i94.cbp.dhs.gov</a>.</small>
+        </label>
+
+        <label class="field">
+          <span>Current OPT end date <em>(EAD "valid to")</em></span>
+          <input type="date" name="currentOptEnd">
+          <small>The 24-month extension must be filed <strong>before</strong> this date.</small>
+        </label>
+
+        <label class="field">
+          <span>I-983 training plan signed <em>(optional)</em></span>
+          <input type="date" name="i983Signed">
+          <small>Your employer signs the I-983 and your DSO recommends the extension before you file.</small>
+        </label>
+
+        <label class="field">
+          <span>I-765 (STEM) filed / receipt date <em>(optional)</em></span>
+          <input type="date" name="filedDate">
+          <small>A timely filing extends work authorization while the case is pending, up to 180 days.</small>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>STEM-OPT start date <em>(optional)</em></span>
+            <input type="date" name="stemStart">
+            <small>Normally the day after your current OPT ends.</small>
+          </label>
+          <label class="field">
+            <span>STEM-OPT end date <em>(blank = start + 24 months)</em></span>
+            <input type="date" name="stemEnd">
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Unemployment days used so far <em>(optional)</em></span>
+          <input type="number" name="unemploymentUsed" min="0" max="150" step="1" placeholder="0" inputmode="numeric">
+          <small>Across OPT plus STEM-OPT you get an aggregate of 150 days.</small>
+        </label>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-clear="stem">Clear this tab</button>
+        </div>
+      </form>
+
+      <div class="card results" id="results-stem">
+        <div class="results-head">
+          <h2>Your deadlines</h2>
+          <button type="button" class="btn btn-primary" data-ics="stem">⬇ Export reminders (.ics)</button>
+        </div>
+        <div class="flags" data-flags></div>
+        <ol class="timeline" data-timeline></ol>
+        <p class="empty" data-empty>Enter your current OPT end date to see your STEM-OPT timeline.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CPT ================= -->
+  <section class="panel" id="panel-cpt" role="tabpanel" aria-labelledby="tab-cpt" hidden>
+    <div class="grid">
+      <form class="card" id="form-cpt" autocomplete="off">
+        <h2>CPT authorizations</h2>
+        <p class="hint">
+          Add one row per CPT authorization on your I-20. <strong>Full-time CPT (more than 20 hrs/week)</strong>
+          accumulates toward a 365-day cap; at 365 days or more you become ineligible for OPT at that degree level.
+          Part-time CPT does not count toward the cap.
+        </p>
+
+        <div id="cptList" class="cpt-list"></div>
+        <button type="button" class="btn btn-ghost" id="addCpt">+ Add CPT authorization</button>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-clear="cpt">Clear this tab</button>
+        </div>
+      </form>
+
+      <div class="card results" id="results-cpt">
+        <div class="results-head">
+          <h2>Status</h2>
+          <button type="button" class="btn btn-primary" data-ics="cpt">⬇ Export reminders (.ics)</button>
+        </div>
+        <div class="meter-block" id="cptMeter" hidden>
+          <div class="meter-label"><span>Full-time CPT used</span><strong id="cptDaysLabel">0 / 365 days</strong></div>
+          <div class="meter"><div class="meter-fill" id="cptMeterFill"></div></div>
+          <p class="meter-note" id="cptMeterNote"></p>
+        </div>
+        <div class="flags" data-flags></div>
+        <ol class="timeline" data-timeline></ol>
+        <p class="empty" data-empty>Add a CPT authorization to see your totals.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= GLOSSARY ================= -->
+  <section class="panel" id="panel-glossary" role="tabpanel" aria-labelledby="tab-glossary" hidden>
+    <div class="card prose">
+      <h2>Glossary</h2>
+      <dl class="glossary">
+        <dt>F-1</dt><dd>The nonimmigrant student classification for academic study in the United States.</dd>
+        <dt>I-20</dt><dd>"Certificate of Eligibility for Nonimmigrant Student Status," issued by your school. Your program end date, CPT authorizations, and OPT recommendation all appear on it.</dd>
+        <dt>I-94</dt><dd>The admission record showing your class of admission and how long you may stay. Under the Duration of Status final rule (effective mid-September 2026) it carries a <strong>fixed expiration date</strong> instead of the open-ended "D/S" notation. Retrieve yours at i94.cbp.dhs.gov.</dd>
+        <dt>D/S (Duration of Status)</dt><dd>The former open-ended admission period for F-1 students. The final rule replaces it with a fixed admission period, so your authorized stay can end before your program or OPT does.</dd>
+        <dt>DSO</dt><dd>Designated School Official — the person at your school authorized to update SEVIS, issue I-20s, and recommend CPT/OPT. Your single source of truth.</dd>
+        <dt>SEVIS</dt><dd>Student and Exchange Visitor Information System, the federal database that holds your F-1 record.</dd>
+        <dt>CPT</dt><dd>Curricular Practical Training — employment that is an integral part of your curriculum, authorized by your DSO on your I-20 <strong>before</strong> you start work. Twelve months or more of full-time CPT eliminates OPT eligibility at that degree level.</dd>
+        <dt>OPT</dt><dd>Optional Practical Training — up to 12 months of work authorization per higher degree level, most often used after graduation ("post-completion OPT").</dd>
+        <dt>STEM-OPT extension</dt><dd>A 24-month extension of post-completion OPT for students with a qualifying STEM degree working for an E-Verify employer under a formal training plan.</dd>
+        <dt>EAD</dt><dd>Employment Authorization Document — the physical card from USCIS. Its "valid from" and "valid to" dates define your actual work period, not the dates you requested.</dd>
+        <dt>Form I-765</dt><dd>Application for Employment Authorization — what you file with USCIS for OPT and STEM-OPT.</dd>
+        <dt>Form I-983</dt><dd>The training plan you and your employer complete for STEM-OPT, including self-evaluations at 12 months and at the end of the extension.</dd>
+        <dt>Form I-539</dt><dd>Application to Extend/Change Nonimmigrant Status. With fixed I-94 end dates, you may need this to extend your authorized stay if your I-94 expires before a filing window closes.</dd>
+        <dt>Grace period</dt><dd>Time to depart, transfer, or change status after your authorized activity ends: 60 days after program completion, 30 days after post-completion OPT ends, 60 days after STEM-OPT ends.</dd>
+        <dt>Cap-gap</dt><dd>An automatic extension of F-1 status, and sometimes work authorization, for students with a timely-filed cap-subject H-1B petition requesting an October 1 start date.</dd>
+        <dt>Unemployment days</dt><dd>Aggregate days without qualifying employment during OPT: 90 days on post-completion OPT, plus 60 more (150 total) during a STEM-OPT extension.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ================= RESOURCES ================= -->
+  <section class="panel" id="panel-resources" role="tabpanel" aria-labelledby="tab-resources" hidden>
+    <div class="card prose">
+      <h2>Official resources</h2>
+      <p class="hint">These links go to official U.S. government sources. Anything else — including this app — is unofficial.</p>
+      <ul class="links">
+        <li><a href="https://i94.cbp.dhs.gov/" target="_blank" rel="noopener">CBP — retrieve your I-94 and admission record</a></li>
+        <li><a href="https://www.uscis.gov/working-in-the-united-states/students-and-exchange-visitors/optional-practical-training-opt-for-f-1-students" target="_blank" rel="noopener">USCIS — Optional Practical Training (OPT) for F-1 students</a></li>
+        <li><a href="https://www.uscis.gov/working-in-the-united-states/students-and-exchange-visitors/optional-practical-training-extension-for-stem-students-stem-opt" target="_blank" rel="noopener">USCIS — STEM OPT extension</a></li>
+        <li><a href="https://www.uscis.gov/i-765" target="_blank" rel="noopener">USCIS — Form I-765, Application for Employment Authorization</a></li>
+        <li><a href="https://www.uscis.gov/i-539" target="_blank" rel="noopener">USCIS — Form I-539, Application to Extend/Change Nonimmigrant Status</a></li>
+        <li><a href="https://egov.uscis.gov/casestatus/landing.do" target="_blank" rel="noopener">USCIS — case status online</a></li>
+        <li><a href="https://egov.uscis.gov/processing-times/" target="_blank" rel="noopener">USCIS — case processing times</a></li>
+        <li><a href="https://studyinthestates.dhs.gov/students/training-opportunities-in-the-united-states/optional-practical-training" target="_blank" rel="noopener">Study in the States (DHS) — Optional Practical Training</a></li>
+        <li><a href="https://studyinthestates.dhs.gov/students/training-opportunities-in-the-united-states/curricular-practical-training" target="_blank" rel="noopener">Study in the States (DHS) — Curricular Practical Training</a></li>
+        <li><a href="https://studyinthestates.dhs.gov/stem-opt-hub" target="_blank" rel="noopener">Study in the States (DHS) — STEM OPT Hub and Form I-983</a></li>
+        <li><a href="https://www.ice.gov/sevis" target="_blank" rel="noopener">ICE — SEVP and SEVIS</a></li>
+        <li><a href="https://www.e-verify.gov/" target="_blank" rel="noopener">E-Verify — required for STEM-OPT employers</a></li>
+        <li><a href="https://www.federalregister.gov/" target="_blank" rel="noopener">Federal Register — search for the Duration of Status final rule</a></li>
+      </ul>
+      <h3>Before you rely on any date in this app</h3>
+      <ol>
+        <li>Pull your current I-94 and confirm the exact expiration date.</li>
+        <li>Compare your I-20 program end date against what your DSO has in SEVIS.</li>
+        <li>Send your DSO the dates this app produced and ask them to confirm.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ================= DATA & BACKUP ================= -->
+  <section class="panel" id="panel-data" role="tabpanel" aria-labelledby="tab-data" hidden>
+    <div class="card prose">
+      <h2>Where your data lives</h2>
+      <p>
+        This app has <strong>no backend, no database, and no analytics</strong>. It is a folder of static files.
+        Every date you type is calculated and stored by JavaScript running in your own browser, in
+        <code>localStorage</code> under this site's origin. Whoever published this app cannot read it — there is
+        nowhere for it to be sent.
+      </p>
+      <ul class="links">
+        <li><strong>Calendar export</strong> builds the <code>.ics</code> file in memory and hands it to your browser's download. Your calendar app does the reminding from then on, offline.</li>
+        <li><strong>Google Drive backup</strong> is optional. Your browser talks directly to Google with your own login and the narrow <code>drive.file</code> scope, which only grants access to files this app itself created.</li>
+      </ul>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Local backup</h2>
+        <p class="hint">A plain JSON file you keep wherever you like.</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="exportJson">⬇ Download JSON backup</button>
+          <button type="button" class="btn btn-ghost" id="importJsonBtn">⬆ Restore from JSON</button>
+          <input type="file" id="importJson" accept="application/json,.json" hidden>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="exportAllIcs">⬇ Export all reminders (.ics)</button>
+          <button type="button" class="btn btn-danger" id="wipeAll">Erase all local data</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Google Drive backup <span class="pill pill-muted">optional</span></h2>
+        <p class="hint">
+          Browser to Google directly. No server of ours is involved, and the <code>drive.file</code> scope means this
+          app can only ever see the backup files it created itself.
+        </p>
+        <label class="field">
+          <span>Google OAuth Client ID</span>
+          <input type="text" id="clientId" placeholder="xxxxxxxx.apps.googleusercontent.com" spellcheck="false">
+          <small>Stored locally in this browser. The README explains how to create a free one.</small>
+        </label>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="driveBackup">Save backup to my Drive</button>
+          <button type="button" class="btn btn-ghost" id="driveRestore">Restore latest from Drive</button>
+          <button type="button" class="btn btn-ghost" id="driveSignOut">Sign out</button>
+        </div>
+        <p class="status" id="driveStatus" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer wrap">
+  <p>
+    <strong>Not legal advice.</strong> Unofficial tool — verify everything with your DSO. Built as a static site:
+    no server, no database, no tracking.
+  </p>
+  <p class="muted" id="swStatus">Offline-ready</p>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

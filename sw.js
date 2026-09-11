@@ -1,0 +1,88 @@
+/*
+ * Service worker: makes the app installable and fully usable offline.
+ *
+ * It caches this site's own static files only. It never caches, proxies, or
+ * inspects anything to do with Google sign-in or Drive — those requests are
+ * passed straight through to the network, browser to Google.
+ */
+
+var CACHE = 'opt-tracker-v1';
+
+var ASSETS = [
+  './',
+  'index.html',
+  'styles.css',
+  'app.js',
+  'config.js',
+  'manifest.json',
+  'icons/icon.svg',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/icon-maskable-512.png'
+];
+
+self.addEventListener('install', function (event) {
+  event.waitUntil(
+    caches.open(CACHE).then(function (cache) {
+      return cache.addAll(ASSETS);
+    }).then(function () {
+      return self.skipWaiting();
+    })
+  );
+});
+
+self.addEventListener('activate', function (event) {
+  event.waitUntil(
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.map(function (key) {
+        return key === CACHE ? null : caches.delete(key);
+      }));
+    }).then(function () {
+      return self.clients.claim();
+    })
+  );
+});
+
+self.addEventListener('fetch', function (event) {
+  var request = event.request;
+
+  if (request.method !== 'GET') return;
+
+  var url = new URL(request.url);
+
+  // Anything off-origin (Google Identity Services, the Drive API) goes straight
+  // to the network and is never stored here.
+  if (url.origin !== self.location.origin) return;
+
+  // Navigations: serve the cached shell when offline so the app always opens.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).then(function (response) {
+        var copy = response.clone();
+        caches.open(CACHE).then(function (cache) { cache.put('index.html', copy); });
+        return response;
+      }).catch(function () {
+        return caches.match('index.html').then(function (cached) {
+          return cached || caches.match('./');
+        });
+      })
+    );
+    return;
+  }
+
+  // Static assets: cache first, then refresh the copy in the background.
+  event.respondWith(
+    caches.match(request).then(function (cached) {
+      var network = fetch(request).then(function (response) {
+        if (response && response.ok && response.type === 'basic') {
+          var copy = response.clone();
+          caches.open(CACHE).then(function (cache) { cache.put(request, copy); });
+        }
+        return response;
+      }).catch(function () {
+        return cached;
+      });
+      return cached || network;
+    })
+  );
+});
