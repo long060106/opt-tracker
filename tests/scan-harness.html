@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Document reader accuracy harness</title>
+<style>
+  body { font: 13px/1.45 ui-monospace, Consolas, monospace; margin: 1rem; }
+  pre { white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Document reader accuracy harness</h1>
+<p>Serve the project root over HTTP, run <code>npm run fixtures</code>, then open this page.
+  Add <code>?only=text</code> to run a subset. This runs the real browser pipeline, including PDFs.</p>
+<pre id="out"></pre>
+<script src="../scan-core.js"></script>
+<script src="../scan-ui.js"></script>
+<script src="scan-grade.js"></script>
+<script>
+(async function () {
+  var out = document.getElementById('out');
+  function log(line) { out.textContent += line + '\n'; }
+  var only = new URLSearchParams(location.search).get('only') || '';
+  var manifest = await (await fetch('fixtures/out/manifest.json')).json();
+  var engine = await OPTScanBrowser.createEngine();
+  var tally = {};
+  var rows = [];
+  for (var i = 0; i < manifest.length; i++) {
+    var entry = manifest[i];
+    if (only && entry.file.indexOf(only) < 0) continue;
+    var blob = await (await fetch('fixtures/out/' + entry.file)).blob();
+    var type = /\.pdf$/.test(entry.file) ? 'application/pdf' : /\.png$/.test(entry.file) ? 'image/png' : 'image/jpeg';
+    var file = new File([blob], entry.file, { type: type });
+    var t0 = performance.now();
+    var result, verdict;
+    try {
+      result = await OPTScanBrowser.scanFile(file, engine, { today: '2026-09-14' });
+      verdict = gradeScan(entry.expect, result);
+    } catch (err) {
+      result = { fields: [], notices: [] };
+      verdict = 'error:' + (err.code || err.message);
+      console.error(entry.file, err, err.cause);
+    }
+    tally[verdict] = (tally[verdict] || 0) + 1;
+    var f = result.fields[0];
+    var detail = f
+      ? (f.value || '(' + f.options.join('|') + ')') + ' ' + f.status + ' raw="' + f.raw + '" 2nd="' + f.secondRead + '" [' + f.issues.join(',') + ']'
+      : 'doc=' + result.doc + ' ds=' + result.ds + ' case=' + result.caseType;
+    rows.push({ file: entry.file, verdict: verdict, detail: detail, source: result.source || '' });
+    log(verdict.padEnd(16) + ' ' + entry.file.padEnd(38) + ' ' + String(Math.round(performance.now() - t0)).padStart(6) + 'ms  ' +
+      detail + (result.source ? '  src=' + result.source : ''));
+    result.image = null;
+  }
+  await engine.terminate();
+  log('\n' + JSON.stringify(tally));
+  window.harness = { done: true, tally: tally, rows: rows };
+})().catch(function (err) {
+  document.getElementById('out').textContent += '\nFATAL ' + (err && (err.stack || err.message) || err);
+  window.harness = { done: true, error: String(err && err.message || err) };
+});
+</script>
+</body>
+</html>

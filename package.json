@@ -1,0 +1,20 @@
+{
+  "name": "opt-tracker",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Offline-capable PWA for tracking F-1 OPT / STEM-OPT / CPT deadlines. No server, no database.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "fixtures": "python tests/fixtures/make_fixtures.py",
+    "test:scan": "node tests/scan-e2e.js",
+    "vendor": "node scripts/vendor.js"
+  },
+  "devDependencies": {
+    "@tesseract.js-data/eng": "1.0.0",
+    "jpeg-js": "0.4.4",
+    "pdfjs-dist": "6.3.289",
+    "pngjs": "7.0.0",
+    "tesseract.js": "7.0.0"
+  }
+}

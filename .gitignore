@@ -2,3 +2,5 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+tests/fixtures/out/
+.claude/

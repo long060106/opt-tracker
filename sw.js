@@ -6,7 +6,12 @@
  * passed straight through to the network, browser to Google.
  */
 
-var CACHE = 'opt-tracker-v1';
+var CACHE = 'opt-tracker-v2';
+
+// The document reader's libraries (vendor/) are several megabytes, so they are not
+// downloaded at install time. They are cached the first time someone scans a document,
+// in a separate cache that survives app updates.
+var VENDOR_CACHE = 'opt-tracker-vendor-v1';
 
 var ASSETS = [
   './',
@@ -14,6 +19,8 @@ var ASSETS = [
   'styles.css',
   'app.js',
   'config.js',
+  'scan-core.js',
+  'scan-ui.js',
   'manifest.json',
   'icons/icon.svg',
   'icons/icon-192.png',
@@ -35,7 +42,7 @@ self.addEventListener('activate', function (event) {
   event.waitUntil(
     caches.keys().then(function (keys) {
       return Promise.all(keys.map(function (key) {
-        return key === CACHE ? null : caches.delete(key);
+        return key === CACHE || key === VENDOR_CACHE ? null : caches.delete(key);
       }));
     }).then(function () {
       return self.clients.claim();
@@ -64,6 +71,22 @@ self.addEventListener('fetch', function (event) {
       }).catch(function () {
         return caches.match('index.html').then(function (cached) {
           return cached || caches.match('./');
+        });
+      })
+    );
+    return;
+  }
+
+  // Reader libraries: versioned files, so cache on first use and never re-download.
+  var scope = new URL(self.registration.scope).pathname;
+  if (url.pathname.indexOf(scope + 'vendor/') === 0) {
+    event.respondWith(
+      caches.open(VENDOR_CACHE).then(function (cache) {
+        return cache.match(request).then(function (cached) {
+          return cached || fetch(request).then(function (response) {
+            if (response && response.ok && response.type === 'basic') cache.put(request, response.clone());
+            return response;
+          });
         });
       })
     );

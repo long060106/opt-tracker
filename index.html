@@ -55,6 +55,16 @@
         <h2>Your dates</h2>
         <p class="hint">Everything below stays in this browser. Nothing is uploaded.</p>
 
+        <div class="scan-box">
+          <div class="scan-copy">
+            <strong>Fill from a document</strong>
+            <small>A photo, screenshot, or PDF of your I-94 printout or I-797C receipt notice. It is read on this device and never uploaded.</small>
+          </div>
+          <button type="button" class="btn" data-scan-pick="opt">📷 Scan a document</button>
+          <input type="file" accept="image/*,application/pdf,.pdf" data-scan-input="opt" hidden>
+          <p class="scan-status" data-scan-status="opt" role="status"></p>
+        </div>
+
         <label class="field">
           <span>I-94 expiration date <em>(admit-until date)</em></span>
           <input type="date" name="i94Expiration">
@@ -119,6 +129,16 @@
       <form class="card" id="form-stem" autocomplete="off">
         <h2>Your dates</h2>
         <p class="hint">STEM-OPT adds 24 months on top of an approved period of post-completion OPT.</p>
+
+        <div class="scan-box">
+          <div class="scan-copy">
+            <strong>Fill from a document</strong>
+            <small>A photo, screenshot, or PDF of your I-94 printout or your STEM-OPT I-797C receipt notice. It is read on this device and never uploaded.</small>
+          </div>
+          <button type="button" class="btn" data-scan-pick="stem">📷 Scan a document</button>
+          <input type="file" accept="image/*,application/pdf,.pdf" data-scan-input="stem" hidden>
+          <p class="scan-status" data-scan-status="stem" role="status"></p>
+        </div>
 
         <label class="field">
           <span>I-94 expiration date</span>
@@ -333,7 +353,28 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+<dialog class="scan-dialog" id="scanDialog" aria-labelledby="scanTitle">
+  <div class="scan-body">
+    <div class="scan-head">
+      <h2 id="scanTitle">Reading your document</h2>
+      <button type="button" class="btn btn-ghost" data-scan-close aria-label="Close">✕</button>
+    </div>
+    <div class="scan-progress" id="scanProgress">
+      <p id="scanStep" role="status" aria-live="polite">Starting…</p>
+      <div class="meter"><div class="meter-fill" id="scanBar"></div></div>
+      <p class="hint">Your file stays on this device. The first scan downloads the reader (about 7 MB) from this site; after that it also works offline.</p>
+    </div>
+    <div class="scan-result" id="scanResult" hidden></div>
+  </div>
+  <div class="scan-actions" id="scanActions" hidden>
+    <button type="button" class="btn btn-ghost" id="scanCancel" data-scan-close>Cancel</button>
+    <button type="button" class="btn btn-primary" id="scanApply" disabled>Fill in confirmed dates</button>
+  </div>
+</dialog>
+
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="scan-core.js"></script>
+<script src="scan-ui.js"></script>
 </body>
 </html>
