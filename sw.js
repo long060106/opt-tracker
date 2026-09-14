@@ -61,12 +61,19 @@ self.addEventListener('fetch', function (event) {
   // to the network and is never stored here.
   if (url.origin !== self.location.origin) return;
 
+  var scope = new URL(self.registration.scope).pathname;
+
   // Navigations: serve the cached shell when offline so the app always opens.
   if (request.mode === 'navigate') {
+    // Only a successful load of the app page itself may replace the cached shell; otherwise
+    // visiting a 404 or any other page on this site would become the offline app.
+    var isShell = url.pathname === scope || url.pathname === scope + 'index.html';
     event.respondWith(
       fetch(request).then(function (response) {
-        var copy = response.clone();
-        caches.open(CACHE).then(function (cache) { cache.put('index.html', copy); });
+        if (isShell && response.ok && response.type === 'basic') {
+          var copy = response.clone();
+          caches.open(CACHE).then(function (cache) { cache.put('index.html', copy); });
+        }
         return response;
       }).catch(function () {
         return caches.match('index.html').then(function (cached) {
@@ -78,7 +85,6 @@ self.addEventListener('fetch', function (event) {
   }
 
   // Reader libraries: versioned files, so cache on first use and never re-download.
-  var scope = new URL(self.registration.scope).pathname;
   if (url.pathname.indexOf(scope + 'vendor/') === 0) {
     event.respondWith(
       caches.open(VENDOR_CACHE).then(function (cache) {
